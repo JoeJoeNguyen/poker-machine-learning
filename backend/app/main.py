@@ -4,6 +4,7 @@ import logging
 
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+import os
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.websockets import WebSocketDisconnect as StarletteWebSocketDisconnect
@@ -20,9 +21,12 @@ app = FastAPI(title="Poker Rooms API")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("poker.rooms")
 
+allowed = os.getenv("CORS_ORIGINS", "http://localhost:5173")
+origins = [o.strip() for o in allowed.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

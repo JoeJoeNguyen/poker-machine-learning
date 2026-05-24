@@ -34,3 +34,17 @@ Specify a license for the project (e.g., MIT) in a LICENSE file.
 Notes
 -----
 Corrected typos and clarified project description. Update the commands and filenames above to match your repository structure.
+
+Deployment (quick)
+------------------
+Frontend on Vercel:
+- Connect this GitHub repository to Vercel and deploy the project. In the Vercel dashboard set an environment variable `VITE_API_BASE` to your backend HTTPS URL (for example `https://api.example.com`).
+
+Backend (example hosts):
+- Use Railway, Render, or AWS App Runner / Elastic Beanstalk to host the FastAPI backend. Ensure you set `DATABASE_URL` for Postgres and `CORS_ORIGINS` to your frontend origin (e.g. `https://your-site.vercel.app`).
+
+Notes:
+- The frontend reads `VITE_API_BASE` at build time to connect to the API and will automatically use `wss://` for secure WebSockets when the API URL is HTTPS.
+- Keep secrets out of the repo; use the host's environment variables for production values.
+
+If you want, I can patch the repo to add a simple GitHub Actions workflow to deploy the backend to AWS or provide step-by-step console instructions for AWS services.

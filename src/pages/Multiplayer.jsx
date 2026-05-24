@@ -1,7 +1,8 @@
 import React from 'react'
 import VanillaTilt from 'vanilla-tilt'
 
-const API_BASE = 'http://localhost:8000'
+// Use Vite environment variable when available in production
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 const STARTING_CHIPS = 1000
 const SMALL_BLIND = 10
 const BIG_BLIND = 20
