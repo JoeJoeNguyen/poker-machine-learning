@@ -1,8 +1,16 @@
 import React from 'react'
 import VanillaTilt from 'vanilla-tilt'
 
-// Use Vite environment variable when available in production
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+const PROD_API_BASE = 'https://poker-machine-learning-production.up.railway.app'
+
+function resolveApiBase() {
+  const configured = import.meta.env.VITE_API_BASE
+  if (configured) return configured
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') return 'http://localhost:8000'
+  return PROD_API_BASE
+}
+
+const API_BASE = resolveApiBase()
 const STARTING_CHIPS = 1000
 const SMALL_BLIND = 10
 const BIG_BLIND = 20

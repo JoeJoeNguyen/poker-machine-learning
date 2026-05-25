@@ -9,6 +9,9 @@ FastAPI + PostgreSQL + WebSocket backend for room creation and join.
 
 ```
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/poker
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+# Optional single frontend URL (also accepted by CORS middleware)
+FRONTEND_URL=https://your-frontend-domain.example
 ```
 
 3. Install dependencies:

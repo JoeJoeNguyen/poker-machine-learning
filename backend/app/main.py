@@ -21,8 +21,23 @@ app = FastAPI(title="Poker Rooms API")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("poker.rooms")
 
-allowed = os.getenv("CORS_ORIGINS", "http://localhost:5173")
-origins = [o.strip() for o in allowed.split(",") if o.strip()]
+def _load_cors_origins() -> list[str]:
+    raw_origins = os.getenv("CORS_ORIGINS", "")
+    frontend_url = os.getenv("FRONTEND_URL", "")
+
+    values = []
+    if raw_origins:
+        values.extend(raw_origins.split(","))
+    if frontend_url:
+        values.append(frontend_url)
+
+    origins = [origin.strip().rstrip("/") for origin in values if origin.strip()]
+    if not origins:
+        origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    return sorted(set(origins))
+
+
+origins = _load_cors_origins()
 
 app.add_middleware(
     CORSMiddleware,
