@@ -14,6 +14,12 @@ CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 FRONTEND_URL=https://your-frontend-domain.example
 ```
 
+Railway note:
+- Make sure the backend service is linked to the Postgres service.
+- Set `DATABASE_URL` in the backend service environment.
+- `postgres://...` and `postgresql://...` are accepted and normalized automatically.
+- If you do not set `DATABASE_URL`, the app can also build it from `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, and `PGDATABASE`.
+
 3. Install dependencies:
 
 ```bash
