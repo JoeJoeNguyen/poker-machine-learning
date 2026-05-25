@@ -49,6 +49,7 @@ app.add_middleware(
 
 engine = create_engine()
 SessionFactory = create_session_factory(engine)
+db_ready = False
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
@@ -58,8 +59,14 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 @app.on_event("startup")
 async def on_startup() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    global db_ready
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        db_ready = True
+    except Exception as exc:
+        db_ready = False
+        logger.exception("Database unavailable during startup: %s", exc)
 
 
 @app.post("/api/rooms", response_model=CreateRoomResponse)
@@ -224,4 +231,4 @@ async def room_socket(websocket: WebSocket, room_code: str) -> None:
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "database": "ready" if db_ready else "unavailable"}
