@@ -24,11 +24,11 @@ If you prefer to run locally (developer-friendly): clone the repo and follow the
 
 Get involved
 ------------
-Feedback, bug reports, and ideas are welcome — open an issue or a PR. If you want early access to the bot training builds, DM me with your email or GitHub handle.
+Feedback, bug reports, and ideas are welcome — open an issue or a PR. 
 
 License
 -------
-Add a LICENSE file (MIT or similar) if you want this project published under an open-source license.
+MIT license 
 
 Notes
 -----
