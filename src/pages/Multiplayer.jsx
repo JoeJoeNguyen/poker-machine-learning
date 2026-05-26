@@ -629,7 +629,7 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
   }, [visibleGame?.communityCards, tablePlayers, revealAllHands])
 
   return (
-    <div ref={tableRootRef} style={{ minHeight: '100vh', padding: 24, background: 'linear-gradient(135deg,#140b06 0%, #2b160b 45%, #f5efe6 100%)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+    <div ref={tableRootRef} style={{ minHeight: '100vh', padding: 24, background: 'linear-gradient(135deg,#140b06 0%, #1f1108 60%, #2b160b 100%)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
       <MonogramLayer cells={monogramCells} suits={monogramSuits} />
       <div style={{ maxWidth: 1180, margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 18 }}>
@@ -665,7 +665,7 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
           <div>{[0, 1, 2, 3, 4].map((i) => visibleGame?.communityCards?.[i] ? <PlayingCard key={visibleGame.communityCards[i].id} card={visibleGame.communityCards[i]} tiltEnabled /> : <EmptyCard key={i} />)}</div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 18 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 18, padding: 16, borderRadius: 24, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' }}>
           {tablePlayers.map((player, index) => (
             <Seat
               key={player.id ?? player.name}
@@ -904,9 +904,9 @@ export default function Multiplayer({ onBack }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', padding: 24, background: 'linear-gradient(135deg,#140b06 0%, #2b160b 45%, #f5efe6 100%)', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', padding: 24, background: 'linear-gradient(135deg,#140b06 0%, #2b160b 45%, #f5efe6 100%)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '"Ledger", serif' }}>
       <MonogramLayer cells={monogramCells} suits={monogramSuits} />
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%' }}>
         {namePrompt.open && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,5,5,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
             <div style={{ width: 360, padding: 20, borderRadius: 18, background: '#1f1108', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', boxSizing: 'border-box' }}>

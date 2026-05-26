@@ -30,6 +30,10 @@ export default function Landing({ onNavigate }) {
     overflow: 'hidden',
     color: '#f8efe6',
     padding: 24,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontFamily: '"Ledger", serif',
   }
 
   const cardStyle = {
@@ -81,11 +85,11 @@ export default function Landing({ onNavigate }) {
           </span>
         ))}
       </div>
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <div style={{ position: 'relative', zIndex: 1, width: '100%' }}>
       <style>{hoverStyles}</style>
       <div style={cardStyle}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ letterSpacing: 2, textTransform: 'uppercase', fontSize: 12, opacity: 0.85, color: '#fff' }}>The River</div>
+          <div style={{ letterSpacing: 3, textTransform: 'uppercase', fontSize: 16, opacity: 0.85, color: '#fff' }}>welcome to the river!</div>
           <h1 style={{ fontSize: 56, lineHeight: 1, margin: '10px 0 12px', color: '#fff', textShadow: '0 6px 18px rgba(0,0,0,0.6)' }}>Choose how you want to play</h1>
           <p style={{ margin: 0, color: 'rgba(255,255,255,0.9)', fontSize: 16 }}>
             Jump into a practice table with bots or set up a multiplayer room.
@@ -94,7 +98,9 @@ export default function Landing({ onNavigate }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18 }}>
           <button
-            onClick={() => onNavigate('bots')}
+            type="button"
+            disabled
+            aria-disabled="true"
             className="game-card"
             style={{
               ...buttonStyle,
@@ -107,11 +113,13 @@ export default function Landing({ onNavigate }) {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
+              opacity: 0.75,
+              cursor: 'not-allowed',
             }}
           >
-            <div style={{ fontSize: 30, marginBottom: 8, width: '100%' }}>Play with bots</div>
+            <div style={{ fontSize: 30, marginBottom: 8, width: '100%' }}>Coming Soon!</div>
             <div style={{ fontWeight: 500, lineHeight: 1.5, width: '100%' }}>
-              Start a solo table and practice against AI opponents.
+              Bots with an advanced algorithm are coming soon.
             </div>
           </button>
 
