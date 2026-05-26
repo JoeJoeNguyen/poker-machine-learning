@@ -1,50 +1,35 @@
 # The River
 
-Overview
---------
-This project implements an AI that learns to play poker and improves over time through experience. It also includes a multiplayer mode so you can play with friends.
+The River is a lightweight, browser-first poker experience that makes it fun to learn, practice, and play with friends.
 
-Key features
+Live demo
+---------
+Try the live site: https://the-river-nu.vercel.app/
+
+Product focus
+-------------
+- Create or join small multiplayer rooms with friends.
+- Clean, responsive UI built with modern web tech so matches load fast in the browser.
+
+What’s coming — Advanced Bot
+----------------------------
+I am actively developing an advanced, research-grade opponent: a learning bot that adapts to play styles and explains its decisions. Future improvements will include:
+- Strategic reasoning across streets (preflop → river)
+- Self-play training and periodic evaluation against curated strategies
+- A “study mode” with hand-by-hand analysis and win-probability traces
+
+Try it locally
+--------------
+If you prefer to run locally (developer-friendly): clone the repo and follow the backend and frontend README files for quick start instructions. The live demo is the fastest way to try the current product.
+
+Get involved
 ------------
-- Reinforcement learning-based agent that self-adapts to opponents and player styles
-- Single-player training against simulated opponents
-- Multiplayer mode for playing with friends
-- Modular design to experiment with different learning algorithms and environments
-
-Getting started
----------------
-1. Clone the repository
-2. Create a virtual environment and install dependencies (see requirements.txt)
-3. Run training scripts to train the agent or start the multiplayer server to play
-
-Basic usage
------------
-- Training: python train.py --config configs/default.yml
-- Play locally: python play.py --mode local
-- Start multiplayer server: python server.py --port 8000
-
-Contributing
-------------
-Contributions, bug reports, and feature requests are welcome. Please open an issue or submit a pull request.
+Feedback, bug reports, and ideas are welcome — open an issue or a PR. If you want early access to the bot training builds, DM me with your email or GitHub handle.
 
 License
 -------
-Specify a license for the project (e.g., MIT) in a LICENSE file.
+Add a LICENSE file (MIT or similar) if you want this project published under an open-source license.
 
 Notes
 -----
-Corrected typos and clarified project description. Update the commands and filenames above to match your repository structure.
-
-Deployment (quick)
-------------------
-Frontend on Vercel:
-- Connect this GitHub repository to Vercel and deploy the project. In the Vercel dashboard set an environment variable `VITE_API_BASE` to your backend HTTPS URL (for example `https://api.example.com`).
-
-Backend (example hosts):
-- Use Railway, Render, or AWS App Runner / Elastic Beanstalk to host the FastAPI backend. Ensure you set `DATABASE_URL` for Postgres and `CORS_ORIGINS` to your frontend origin (e.g. `https://your-site.vercel.app`).
-
-Notes:
-- The frontend reads `VITE_API_BASE` at build time to connect to the API and will automatically use `wss://` for secure WebSockets when the API URL is HTTPS.
-- Keep secrets out of the repo; use the host's environment variables for production values.
-
-If you want, I can patch the repo to add a simple GitHub Actions workflow to deploy the backend to AWS or provide step-by-step console instructions for AWS services.
+This README focuses on product and future work. Technical setup and deployment details are kept in the backend and frontend READMEs.
