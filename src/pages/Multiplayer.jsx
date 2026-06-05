@@ -162,6 +162,11 @@ function bigBlindIndex(playerCount, dealerIndex) {
   return (dealerIndex + 2) % playerCount
 }
 
+function nextDealerIndex(currentDealerIndex, playerCount) {
+  if (playerCount <= 0) return 0
+  return (currentDealerIndex + 1) % playerCount
+}
+
 function canAdvanceStreet(players, currentBet) {
   return players
     .filter((p) => !p.folded && !p.busted && p.chips > 0)
@@ -437,8 +442,9 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
   function startGame() {
     if (!isHost || orderedNames.length < 2) return
     const playerCount = orderedNames.length
-    const sb = smallBlindIndex(playerCount, dealerIndex)
-    const bb = bigBlindIndex(playerCount, dealerIndex)
+    const currentDealer = Number.isFinite(game?.dealerIndex) ? game.dealerIndex : dealerIndex
+    const sb = smallBlindIndex(playerCount, currentDealer)
+    const bb = bigBlindIndex(playerCount, currentDealer)
     const deck = shuffle(buildDeck())
     let cursor = 0
     const players = orderedNames.map((name, index) => ({
@@ -470,7 +476,7 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
       pot: SMALL_BLIND + BIG_BLIND,
       currentBet: BIG_BLIND,
       lastRaiseSize: BIG_BLIND,
-      dealerIndex,
+      dealerIndex: currentDealer,
       smallBlindIndex: sb,
       bigBlindIndex: bb,
       currentTurn: firstTurn,
@@ -524,7 +530,10 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
       nextGame.message = `${nextGame.players[winnerIndex].name} wins the pot.`
       nextGame.stage = 'showdown'
       nextGame.currentTurn = -1
-      setDealerIndex((prev) => (prev + 1) % Math.max(orderedNames.length, 1))
+      nextGame.dealerIndex = nextDealerIndex(nextGame.dealerIndex, orderedNames.length)
+      nextGame.smallBlindIndex = smallBlindIndex(orderedNames.length, nextGame.dealerIndex)
+      nextGame.bigBlindIndex = bigBlindIndex(orderedNames.length, nextGame.dealerIndex)
+      setDealerIndex(nextGame.dealerIndex)
       return nextGame
     }
 
@@ -584,7 +593,10 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     nextGame.revealAllHands = true
     nextGame.currentTurn = -1
     nextGame.message = `${winners.map((w) => w.name).join(', ')} win with ${best?.name || 'best hand'}.`
-    setDealerIndex((prev) => (prev + 1) % Math.max(orderedNames.length, 1))
+    nextGame.dealerIndex = nextDealerIndex(nextGame.dealerIndex, orderedNames.length)
+    nextGame.smallBlindIndex = smallBlindIndex(orderedNames.length, nextGame.dealerIndex)
+    nextGame.bigBlindIndex = bigBlindIndex(orderedNames.length, nextGame.dealerIndex)
+    setDealerIndex(nextGame.dealerIndex)
     return nextGame
   }
 
