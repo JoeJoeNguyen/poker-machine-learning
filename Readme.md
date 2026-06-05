@@ -4,7 +4,7 @@ The River is a lightweight, browser-first poker experience that makes it fun to 
 
 Live demo
 ---------
-Try the live site: https://the-river-nu.vercel.app/
+Try the live site: https://burnandturn.app/
 
 Product focus
 -------------
