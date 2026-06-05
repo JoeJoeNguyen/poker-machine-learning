@@ -300,6 +300,7 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
   ])
   const tableRootRef = React.useRef(null)
   const chatScrollRef = React.useRef(null)
+  const seenChatIdsRef = React.useRef(new Set())
 
   const orderedNames = React.useMemo(() => {
     const names = remoteNames.length ? remoteNames : [normalizedName]
@@ -354,10 +355,13 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
       if (message.type === 'message') {
         const payload = message.payload || {}
         if (payload.type === 'chat') {
+          const chatId = payload.id || `${payload.author || ''}:${payload.text || ''}`
+          if (seenChatIdsRef.current.has(chatId)) return
+          seenChatIdsRef.current.add(chatId)
           setChatMessages((prev) => [
             ...prev,
             {
-              id: payload.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+              id: chatId,
               author: payload.author || 'Player',
               text: payload.text || '',
               mine: String(payload.author || '').toLowerCase() === normalizedName.toLowerCase(),
@@ -369,6 +373,10 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     }
     return () => { socket.onmessage = original }
   }, [socketRef, normalizedName])
+
+  React.useEffect(() => {
+    seenChatIdsRef.current = new Set()
+  }, [roomCode])
 
   React.useEffect(() => {
     if (externalGame) {
