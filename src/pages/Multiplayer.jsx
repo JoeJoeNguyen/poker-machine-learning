@@ -6,7 +6,7 @@ const PROD_API_BASE = 'https://poker-machine-learning-production.up.railway.app'
 function resolveApiBase() {
   const configured = import.meta.env.VITE_API_BASE
   if (configured) return configured
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') return 'http://localhost:8000'
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) return 'http://127.0.0.1:8000'
   return PROD_API_BASE
 }
 
@@ -289,7 +289,17 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
   const [timeLeft, setTimeLeft] = React.useState(THINK_TIME)
   const [dealerIndex, setDealerIndex] = React.useState(0)
   const [raiseTo, setRaiseTo] = React.useState(BIG_BLIND * 2)
+  const [chatDraft, setChatDraft] = React.useState('')
+  const [chatMessages, setChatMessages] = React.useState([
+    {
+      id: 'chat-system-1',
+      author: 'Table',
+      text: 'Bluff here!',
+      system: true,
+    },
+  ])
   const tableRootRef = React.useRef(null)
+  const chatScrollRef = React.useRef(null)
 
   const orderedNames = React.useMemo(() => {
     const names = remoteNames.length ? remoteNames : [normalizedName]
@@ -341,10 +351,24 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
       if (message.type === 'presence') {
         if (original) original(event)
       }
+      if (message.type === 'message') {
+        const payload = message.payload || {}
+        if (payload.type === 'chat') {
+          setChatMessages((prev) => [
+            ...prev,
+            {
+              id: payload.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+              author: payload.author || 'Player',
+              text: payload.text || '',
+              mine: String(payload.author || '').toLowerCase() === normalizedName.toLowerCase(),
+            },
+          ])
+        }
+      }
       if (message.type === 'game_state') setGame(message.game)
     }
     return () => { socket.onmessage = original }
-  }, [socketRef])
+  }, [socketRef, normalizedName])
 
   React.useEffect(() => {
     if (externalGame) {
@@ -373,12 +397,33 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     return () => window.removeEventListener('storage', handleStorage)
   }, [roomCode])
 
+  React.useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+    }
+  }, [chatMessages])
+
   function commit(nextGame, shouldBroadcast = true) {
     setGame(nextGame)
     onGameState?.(nextGame)
     saveStoredGame(roomCode, nextGame)
     setTimeLeft(THINK_TIME)
     if (shouldBroadcast) broadcast(nextGame)
+  }
+
+  function sendChatMessage() {
+    const text = chatDraft.trim()
+    if (!text) return
+    const chatPacket = {
+      type: 'chat',
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      author: normalizedName,
+      text,
+    }
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify(chatPacket))
+    }
+    setChatDraft('')
   }
 
   function startGame() {
@@ -660,9 +705,87 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
           <div style={{ marginTop: 12, opacity: 0.92 }}>{visibleGame?.message || 'Host can start when at least 2 players joined.'}</div>
         </div>
 
-        <div style={{ textAlign: 'center', padding: 22, borderRadius: 32, background: 'rgba(34,85,43,0.55)', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 70px rgba(0,0,0,0.35)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
-          <h2 style={{ marginTop: 0, color: '#fff' }}>Community Cards</h2>
-          <div>{[0, 1, 2, 3, 4].map((i) => visibleGame?.communityCards?.[i] ? <PlayingCard key={visibleGame.communityCards[i].id} card={visibleGame.communityCards[i]} tiltEnabled /> : <EmptyCard key={i} />)}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(310px, 360px)', gap: 18, alignItems: 'start' }}>
+          <div style={{ textAlign: 'center', padding: 22, borderRadius: 32, background: 'rgba(34,85,43,0.55)', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 70px rgba(0,0,0,0.35)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
+            <h2 style={{ marginTop: 0, color: '#fff' }}>Community Cards</h2>
+            <div>{[0, 1, 2, 3, 4].map((i) => visibleGame?.communityCards?.[i] ? <PlayingCard key={visibleGame.communityCards[i].id} card={visibleGame.communityCards[i]} tiltEnabled /> : <EmptyCard key={i} />)}</div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', minHeight: 338, padding: 16, borderRadius: 28, background: 'rgba(255,248,239,0.08)', border: '1px solid rgba(255,248,239,0.16)', boxShadow: '0 24px 70px rgba(0,0,0,0.3)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 12, letterSpacing: 1.6, textTransform: 'uppercase', opacity: 0.8 }}>Room Chat</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#fff' }}>Talk to the table</div>
+              </div>
+              <div style={{ fontSize: 12, opacity: 0.78, textAlign: 'right' }}>Visible to everyone in this room</div>
+            </div>
+
+            <div ref={chatScrollRef} style={{ flex: 1, overflowY: 'auto', paddingRight: 4, display: 'grid', gap: 10, marginBottom: 14, maxHeight: 280 }}>
+              {chatMessages.map((message) => (
+                <div
+                  key={message.id}
+                  style={{
+                    alignSelf: message.mine ? 'end' : 'start',
+                    justifySelf: message.mine ? 'end' : 'start',
+                    maxWidth: '88%',
+                    padding: '10px 12px',
+                    borderRadius: 18,
+                    background: message.system ? 'rgba(255,255,255,0.08)' : message.mine ? 'linear-gradient(180deg, #f8efe6 0%, #e7d1b7 100%)' : 'rgba(255,255,255,0.10)',
+                    color: message.system || !message.mine ? '#fff' : '#2b160b',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    boxShadow: '0 12px 24px rgba(0,0,0,0.18)',
+                  }}
+                >
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.5, opacity: 0.85, marginBottom: 4 }}>
+                    {message.author}
+                  </div>
+                  <div style={{ fontSize: 14, lineHeight: 1.5 }}>{message.text}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+              <textarea
+                value={chatDraft}
+                onChange={(event) => setChatDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault()
+                    sendChatMessage()
+                  }
+                }}
+                placeholder="Say something to the room..."
+                rows={2}
+                style={{
+                  flex: 1,
+                  resize: 'none',
+                  borderRadius: 16,
+                  border: '1px solid rgba(255,255,255,0.14)',
+                  background: 'rgba(255,255,255,0.08)',
+                  color: '#fff',
+                  padding: '12px 14px',
+                  outline: 'none',
+                  minHeight: 54,
+                  boxSizing: 'border-box',
+                }}
+              />
+              <button
+                onClick={sendChatMessage}
+                style={{
+                  border: 'none',
+                  borderRadius: 14,
+                  padding: '12px 16px',
+                  background: '#f8efe6',
+                  color: '#2b160b',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  minHeight: 54,
+                }}
+              >
+                Send
+              </button>
+            </div>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginTop: 18, padding: 16, borderRadius: 24, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' }}>

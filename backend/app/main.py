@@ -11,9 +11,16 @@ from starlette.websockets import WebSocketDisconnect as StarletteWebSocketDiscon
 
 from .config import settings
 from .db import Base, create_engine, create_session_factory
-from .models import Room
+from .models import FeedbackMessage, Room
 from .room_codes import generate_room_code
-from .schemas import CreateRoomRequest, CreateRoomResponse, JoinRoomRequest, JoinRoomResponse
+from .schemas import (
+    CreateRoomRequest,
+    CreateRoomResponse,
+    FeedbackCreateRequest,
+    FeedbackMessageResponse,
+    JoinRoomRequest,
+    JoinRoomResponse,
+)
 
 app = FastAPI(title="Poker Rooms API")
 
@@ -98,6 +105,44 @@ async def join_room(payload: JoinRoomRequest, session: AsyncSession = Depends(ge
         raise HTTPException(status_code=400, detail="Room is full")
 
     return JoinRoomResponse(code=room.code, max_players=room.max_players, active_players=active_players + 1, token=str(uuid4()))
+
+
+@app.post("/api/feedback", response_model=FeedbackMessageResponse)
+async def create_feedback(
+    payload: FeedbackCreateRequest,
+    session: AsyncSession = Depends(get_session),
+) -> FeedbackMessageResponse:
+    feedback = FeedbackMessage(
+        name=payload.name.strip(),
+        email=payload.email.strip() if payload.email else None,
+        message=payload.message.strip(),
+    )
+    session.add(feedback)
+    await session.commit()
+    await session.refresh(feedback)
+    return FeedbackMessageResponse(
+        id=feedback.id,
+        name=feedback.name,
+        email=feedback.email,
+        message=feedback.message,
+        created_at=feedback.created_at.isoformat() if feedback.created_at else None,
+    )
+
+
+@app.get("/api/feedback", response_model=list[FeedbackMessageResponse])
+async def list_feedback(session: AsyncSession = Depends(get_session)) -> list[FeedbackMessageResponse]:
+    result = await session.execute(select(FeedbackMessage).order_by(FeedbackMessage.created_at.desc()))
+    rows = result.scalars().all()
+    return [
+        FeedbackMessageResponse(
+            id=row.id,
+            name=row.name,
+            email=row.email,
+            message=row.message,
+            created_at=row.created_at.isoformat() if row.created_at else None,
+        )
+        for row in rows
+    ]
 
 
 class ConnectionManager:

@@ -20,3 +20,17 @@ class JoinRoomResponse(BaseModel):
     max_players: int
     active_players: int
     token: str
+
+
+class FeedbackCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    email: str | None = Field(default=None, max_length=255)
+    message: str = Field(min_length=1, max_length=5000)
+
+
+class FeedbackMessageResponse(BaseModel):
+    id: int
+    name: str
+    email: str | None = None
+    message: str
+    created_at: str | None = None
