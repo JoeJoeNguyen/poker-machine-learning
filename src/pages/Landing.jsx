@@ -151,7 +151,7 @@ export default function Landing({ onNavigate }) {
       <style>{hoverStyles}</style>
       <div style={cardStyle}>
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ letterSpacing: 3, textTransform: 'uppercase', fontSize: 16, opacity: 0.85, color: '#fff' }}>welcome to the river!</div>
+          <div style={{ letterSpacing: 3, textTransform: 'uppercase', fontSize: 16, opacity: 0.85, color: '#fff' }}>welcome to burn and turn!</div>
           <h1 style={{ fontSize: 56, lineHeight: 1, margin: '10px 0 12px', color: '#fff', textShadow: '0 6px 18px rgba(0,0,0,0.6)' }}>Choose how you want to play</h1>
           <p style={{ margin: 0, color: 'rgba(255,255,255,0.9)', fontSize: 16 }}>
             Jump into a practice table with bots or set up a multiplayer room.
