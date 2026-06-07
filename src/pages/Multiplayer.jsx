@@ -10,7 +10,6 @@ import winHandSound from '../../soundEffect/winHand.mp3'
 
 const PROD_API_BASE = 'https://poker-machine-learning-production.up.railway.app'
 
-// Chooses the local API during development and the deployed API in production.
 function resolveApiBase() {
   const configured = import.meta.env.VITE_API_BASE
   if (configured) return configured
@@ -38,7 +37,6 @@ const SOUND_URLS = {
   win: winHandSound,
 }
 
-// Creates a unique audio marker that can be sent with a game-state broadcast.
 function createSoundEvent(name, actor = '') {
   return {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -47,19 +45,16 @@ function createSoundEvent(name, actor = '') {
   }
 }
 
-// Adds a sound marker to a mutable game object so every browser can play it.
 function addSoundEvent(game, name, actor = '') {
   if (!game || !name) return game
   game.soundEvents = [...(Array.isArray(game.soundEvents) ? game.soundEvents : []), createSoundEvent(name, actor)]
   return game
 }
 
-// Builds the localStorage key used to persist a room's current game state.
 function roomGameStorageKey(roomCode) {
   return roomCode ? `poker-room-game:${roomCode}` : null
 }
 
-// Reads a previously saved game state for the active room.
 function loadStoredGame(roomCode) {
   const storageKey = roomGameStorageKey(roomCode)
   if (!storageKey || typeof window === 'undefined') return null
@@ -72,7 +67,6 @@ function loadStoredGame(roomCode) {
   }
 }
 
-// Saves game state locally, excluding one-time sound events.
 function saveStoredGame(roomCode, game) {
   const storageKey = roomGameStorageKey(roomCode)
   if (!storageKey || typeof window === 'undefined') return
@@ -84,7 +78,6 @@ function saveStoredGame(roomCode, game) {
   }
 }
 
-// Builds a standard 52-card deck with rank, suit, and stable card ids.
 function buildDeck() {
   const deck = []
   for (const suit of suits) {
@@ -93,7 +86,6 @@ function buildDeck() {
   return deck
 }
 
-// Returns a shuffled copy of a deck using Fisher-Yates.
 function shuffle(deck) {
   const copy = [...deck]
   for (let i = copy.length - 1; i > 0; i--) {
@@ -103,7 +95,6 @@ function shuffle(deck) {
   return copy
 }
 
-// Compares poker score arrays from highest-priority value to lowest.
 function compareScores(a, b) {
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     const left = a[i] || 0
@@ -114,7 +105,6 @@ function compareScores(a, b) {
   return 0
 }
 
-// Scores exactly five cards using poker hand ranking order.
 function evaluateFive(cards) {
   const values = cards.map((card) => RANK_VALUE[card.rank]).sort((a, b) => b - a)
   const valueCounts = {}
@@ -156,10 +146,8 @@ function evaluateFive(cards) {
   return [0, ...values]
 }
 
-// Produces every combination of a given size from a card list.
 function combinations(cards, count) {
   const result = []
-  // Recursively walks card choices until a full combination is built.
   function walk(start, chosen) {
     if (chosen.length === count) {
       result.push([...chosen])
@@ -175,7 +163,6 @@ function combinations(cards, count) {
   return result
 }
 
-// Finds the best five-card score from a larger set of cards.
 function bestHandScore(cards) {
   let best = null
   combinations(cards, 5).forEach((combo) => {
@@ -185,7 +172,6 @@ function bestHandScore(cards) {
   return best || [0]
 }
 
-// Finds the next player who is still eligible to act.
 function nextActiveIndex(players, fromIndex) {
   if (!players.length) return -1
   for (let step = 1; step <= players.length; step++) {
@@ -195,34 +181,29 @@ function nextActiveIndex(players, fromIndex) {
   return -1
 }
 
-// Calculates which seat posts the small blind for the current dealer.
 function smallBlindIndex(playerCount, dealerIndex) {
   if (playerCount <= 1) return 0
   if (playerCount === 2) return dealerIndex
   return (dealerIndex + 1) % playerCount
 }
 
-// Calculates which seat posts the big blind for the current dealer.
 function bigBlindIndex(playerCount, dealerIndex) {
   if (playerCount <= 1) return 0
   if (playerCount === 2) return (dealerIndex + 1) % playerCount
   return (dealerIndex + 2) % playerCount
 }
 
-// Advances the dealer button for the next hand.
 function nextDealerIndex(currentDealerIndex, playerCount) {
   if (playerCount <= 0) return 0
   return (currentDealerIndex + 1) % playerCount
 }
 
-// Checks whether all active players have matched the bet and acted.
 function canAdvanceStreet(players, currentBet) {
   return players
     .filter((p) => !p.folded && !p.busted && p.chips > 0)
     .every((p) => p.currentBet === currentBet && p.hasActed)
 }
 
-// Hides private cards from other viewers while preserving public state.
 function publicGameState(game, viewerName) {
   if (!game) return null
   if (!Array.isArray(game.players)) {
@@ -239,7 +220,6 @@ function publicGameState(game, viewerName) {
   }
 }
 
-// Estimates hero equity by simulating random remaining cards and opponents.
 function estimateHandWinOdds(heroCards, communityCards, activeOpponents, trials = 1000) {
   if (!heroCards || heroCards.length < 2) return null
 
@@ -285,7 +265,6 @@ function estimateHandWinOdds(heroCards, communityCards, activeOpponents, trials 
   return Math.round((equity / trials) * 1000) / 10
 }
 
-// Preloads and plays multiplayer audio, deduping broadcast sound events.
 function useMultiplayerAudio() {
   const audioRef = React.useRef({})
   const seenSoundIdsRef = React.useRef(new Set())
@@ -301,7 +280,6 @@ function useMultiplayerAudio() {
     )
   }, [])
 
-  // Plays a named sound effect if the browser currently allows audio playback.
   const playSound = React.useCallback((name) => {
     const source = audioRef.current[name]
     if (!source) return
@@ -312,7 +290,6 @@ function useMultiplayerAudio() {
     })
   }, [])
 
-  // Plays a broadcast sound event once per browser.
   const playSoundEvent = React.useCallback((event) => {
     if (!event?.id || !event.name || seenSoundIdsRef.current.has(event.id)) return
     seenSoundIdsRef.current.add(event.id)
@@ -322,7 +299,6 @@ function useMultiplayerAudio() {
   return { playSound, playSoundEvent }
 }
 
-// Renders one card, including hidden-card state, hover scaling, and optional hover audio.
 function PlayingCard({ card, hidden = false, blurred = false, tiltEnabled = false, onHoverSound }) {
   const red = card?.suit === '♥' || card?.suit === '♦'
   const [hovered, setHovered] = React.useState(false)
@@ -350,12 +326,10 @@ function PlayingCard({ card, hidden = false, blurred = false, tiltEnabled = fals
   )
 }
 
-// Renders an empty community-card slot before a street is dealt.
 function EmptyCard() {
   return <div style={{ width: 72, height: 102, borderRadius: 14, margin: 5, display: 'inline-block', border: '2px dashed rgba(255,247,236,0.35)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }} />
 }
 
-// Renders a player seat with cards, role badges, chip count, bet, and odds.
 function Seat({ player, isTurn, isHero, isHost, dealer, smallBlind, bigBlind, odds, revealAllHands, onCardHover }) {
   return (
     <div style={{ padding: 12, borderRadius: 18, background: isTurn ? 'rgba(248,239,230,0.18)' : 'rgba(255,255,255,0.07)', border: isTurn ? '2px solid #f8efe6' : '1px solid rgba(255,255,255,0.12)', minWidth: 220 }}>
@@ -381,7 +355,6 @@ function Seat({ player, isTurn, isHero, isHost, dealer, smallBlind, bigBlind, od
   )
 }
 
-// Runs the actual room table, including poker state, chat, timers, and socket sync.
 function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteNames, playerName, isHost, hostName, socketRef, monogramCells, monogramSuits, externalGame, onGameState }) {
   const normalizedName = playerName.trim() || 'You'
   const effectiveHostName = hostName || remoteNames[0] || normalizedName
@@ -433,7 +406,6 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     return estimateHandWinOdds(hero.cards, game.communityCards || [], opponents, 1000)
   }, [game, hero])
 
-  // Rate-limits card hover audio so moving across cards does not stack sounds.
   const playCardHover = React.useCallback(() => {
     const now = Date.now()
     if (now - lastHoverSoundAtRef.current < 140) return
@@ -446,7 +418,6 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     events.forEach(playSoundEvent)
   }, [game?.soundEvents, playSoundEvent])
 
-  // Sends a full game-state update through the room WebSocket.
   const broadcast = React.useCallback((nextGame) => {
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       // allow caller to pass either a full message ({type:'game_state', game}) or a raw game object
@@ -527,7 +498,6 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     }
   }, [chatMessages])
 
-  // Applies a local game update, persists it, resets the timer, and optionally broadcasts it.
   function commit(nextGame, shouldBroadcast = true) {
     setGame(nextGame)
     onGameState?.(nextGame)
@@ -536,7 +506,6 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     if (shouldBroadcast) broadcast(nextGame)
   }
 
-  // Sends a chat packet to the room through the same WebSocket.
   function sendChatMessage() {
     const text = chatDraft.trim()
     if (!text) return
@@ -552,7 +521,6 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     setChatDraft('')
   }
 
-  // Starts a new poker hand, deals hole cards, posts blinds, and broadcasts the state.
   function startGame() {
     if (!isHost || orderedNames.length < 2) return
     const playerCount = orderedNames.length
@@ -573,7 +541,6 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
       hasActed: false,
     }))
 
-    // Deducts a blind from a player without exceeding their chip stack.
     function postBlind(index, amount) {
       const blind = Math.min(amount, players[index].chips)
       players[index].chips -= blind
@@ -638,7 +605,6 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     }
   }, [game?.stage, isHost, roomCode])
 
-  // Resolves the next step after a player acts: win, new street, or next turn.
   function advanceAfterAction(nextGame, fromIndex) {
     const active = nextGame.players.filter((p) => !p.folded && !p.busted)
     if (active.length === 1) {
@@ -663,7 +629,6 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     return nextGame
   }
 
-  // Deals flop/turn/river or moves to showdown after the final betting round.
   function dealNextStreet(nextGame) {
     nextGame.players = nextGame.players.map((p) => ({ ...p, currentBet: 0, hasActed: false }))
     nextGame.currentBet = 0
@@ -693,7 +658,6 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     return nextGame
   }
 
-  // Evaluates remaining players, awards the pot, and prepares the next dealer position.
   function showdown(nextGame) {
     const contenders = nextGame.players.filter((p) => !p.folded && !p.busted)
     let best = null
@@ -722,11 +686,9 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
     return nextGame
   }
 
-  // Applies the hero's selected action to game state and broadcasts the result.
   function applyAction(action, amount = 0) {
     if (!game || !isHeroTurn || heroIndex < 0 || !game.players?.[heroIndex]) return
     const nextGame = structuredClone(game)
-    nextGame.soundEvents = []
     const player = nextGame.players[heroIndex]
 
     if (action === 'fold') {
@@ -985,7 +947,6 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
   )
 }
 
-// Paints the subtle repeating suit pattern behind the multiplayer screens.
 function MonogramLayer({ cells, suits }) {
   return (
     <div
@@ -1011,7 +972,6 @@ function MonogramLayer({ cells, suits }) {
   )
 }
 
-// Returns shared inline styles for action buttons, including disabled treatment.
 function actionButton(disabled) {
   return {
     border: 'none',
@@ -1028,10 +988,8 @@ function actionButton(disabled) {
   }
 }
 
-// Controls the multiplayer lobby, room connection, and transition into the table.
 export default function Multiplayer({ onBack }) {
   const monogramSuits = ['♣', '♠', '♦', '♥']
-  // Calculates enough background cells to cover the current viewport.
   const computeMonogramCount = () => {
     if (typeof window === 'undefined') return 320
     const cellSize = 70
@@ -1056,7 +1014,6 @@ export default function Multiplayer({ onBack }) {
   const socketRef = React.useRef(null)
 
   React.useEffect(() => {
-    // Recomputes background coverage when the viewport size changes.
     const updateCount = () => setMonogramCount(computeMonogramCount())
     updateCount()
     window.addEventListener('resize', updateCount)
@@ -1065,7 +1022,6 @@ export default function Multiplayer({ onBack }) {
 
   const monogramCells = React.useMemo(() => Array.from({ length: monogramCount }), [monogramCount])
 
-  // Opens a room WebSocket and keeps presence plus shared game state in sync.
   const connectSocket = React.useCallback((code, playerToken, name) => {
     if (socketRef.current) socketRef.current.close()
     const ws = new WebSocket(`${API_BASE.replace('http', 'ws')}/ws/rooms/${code}?token=${playerToken}`)
@@ -1096,7 +1052,6 @@ export default function Multiplayer({ onBack }) {
 
   React.useEffect(() => () => socketRef.current?.close(), [])
 
-  // Creates a new backend room, marks this browser as host, and connects the socket.
   const doCreate = async (cleanedName) => {
     setPlayerName(cleanedName)
     setIsHost(true)
@@ -1123,7 +1078,6 @@ export default function Multiplayer({ onBack }) {
     }
   }
 
-  // Joins an existing backend room and connects this browser to its socket.
   const doJoin = async (cleanedName) => {
     setPlayerName(cleanedName)
     setIsHost(false)
@@ -1149,7 +1103,6 @@ export default function Multiplayer({ onBack }) {
     }
   }
 
-  // Validates the name prompt and dispatches the pending create/join action.
   const confirmName = () => {
     const cleanedName = namePrompt.name.trim()
     if (!cleanedName) {
