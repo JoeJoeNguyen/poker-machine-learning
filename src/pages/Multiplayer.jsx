@@ -9,6 +9,7 @@ import foldSound from '../../soundEffect/Fold.mp3'
 import hoverCardSound from '../../soundEffect/HoverOnCard.mp3'
 import winHandSound from '../../soundEffect/winHand.mp3'
 
+const cardFaceModules = import.meta.glob('../../cardFace/*.png', { eager: true, query: '?url', import: 'default' })
 const PROD_API_BASE = 'https://poker-machine-learning-production.up.railway.app'
 
 // Chooses the correct backend URL for local development or production.
@@ -27,6 +28,11 @@ const THINK_TIME = 15
 const NEXT_ROUND_DELAY = 10
 const suits = ['♠', '♥', '♦', '♣']
 const ranks = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2']
+const SUIT_FILE_NAMES = { '♠': 'spades', '♥': 'hearts', '♦': 'diamonds', '♣': 'clubs' }
+const CARD_FACE_URLS = Object.fromEntries(
+  Object.entries(cardFaceModules).map(([path, url]) => [path.split('/').pop()?.replace('.png', ''), url])
+)
+const CARD_BACK_URL = CARD_FACE_URLS.cardBack
 const RANK_VALUE = { 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10, J: 11, Q: 12, K: 13, A: 14 }
 const HAND_NAMES = ['High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight', 'Flush', 'Full House', 'Four of a Kind', 'Straight Flush']
 const SOUND_URLS = {
@@ -93,6 +99,12 @@ function buildDeck() {
     for (const rank of ranks) deck.push({ rank, suit, id: `${rank}${suit}` })
   }
   return deck
+}
+
+// Resolves a dealt card to its matching image in cardFace, e.g. hearts_A.png.
+function cardFaceUrl(card) {
+  if (!card?.rank || !card?.suit) return null
+  return CARD_FACE_URLS[`${SUIT_FILE_NAMES[card.suit]}_${card.rank}`] || null
 }
 
 // Returns a shuffled copy of a deck using Fisher-Yates.
@@ -327,6 +339,7 @@ function useMultiplayerAudio() {
 // Renders a playing card, hidden card back, or blurred opponent card.
 function PlayingCard({ card, hidden = false, blurred = false, tiltEnabled = false, onHoverSound }) {
   const red = card?.suit === '♥' || card?.suit === '♦'
+  const faceUrl = cardFaceUrl(card)
   const [hovered, setHovered] = React.useState(false)
   return (
     <div
@@ -339,9 +352,23 @@ function PlayingCard({ card, hidden = false, blurred = false, tiltEnabled = fals
     >
       <span
         data-tilt={tiltEnabled && !hidden ? 'true' : undefined}
-        style={{ width: 72, height: 102, borderRadius: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: hidden ? 'rgba(74,45,33,0.62)' : 'rgba(255,247,236,0.78)', color: hidden ? '#fff7ec' : red ? '#dc2626' : '#1f2937', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 8px 20px rgba(0,0,0,0.25)', fontWeight: 800, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', filter: blurred || hidden ? 'blur(2.4px)' : 'none', opacity: blurred ? 0.55 : 1, transition: 'filter 160ms ease, opacity 160ms ease, transform 160ms ease', willChange: 'transform' }}
+        style={{ width: 72, height: 102, borderRadius: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: hidden ? 'rgba(74,45,33,0.62)' : 'rgba(255,247,236,0.78)', color: hidden ? '#fff7ec' : red ? '#dc2626' : '#1f2937', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 8px 20px rgba(0,0,0,0.25)', fontWeight: 800, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', filter: blurred ? 'blur(2.4px)' : 'none', opacity: blurred ? 0.55 : 1, transition: 'filter 160ms ease, opacity 160ms ease, transform 160ms ease', willChange: 'transform' }}
       >
-        {hidden ? '🂠' : (
+        {hidden && CARD_BACK_URL ? (
+          <img
+            src={CARD_BACK_URL}
+            alt="Card back"
+            draggable="false"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : hidden ? '🂠' : faceUrl ? (
+          <img
+            src={faceUrl}
+            alt={`${card.rank} ${SUIT_FILE_NAMES[card.suit]}`}
+            draggable="false"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
           <div style={{ textAlign: 'center' }}>
             <div>{card?.rank}</div>
             <div>{card?.suit}</div>
@@ -826,7 +853,7 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
       <MonogramLayer cells={monogramCells} suits={monogramSuits} />
       <div style={{ maxWidth: 1180, margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-          <button onClick={onBack} style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 9999, padding: '10px 14px', background: 'rgba(255,255,255,0.08)', color: '#fff', cursor: 'pointer', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>← Back</button>
+          <button onClick={onBack} style={{ border: '1px solid rgba(255,255,255,0.16)', borderRadius: 9999, padding: '10px 14px', background: 'rgba(255,255,255,0.08)', color: '#fff', cursor: 'pointer', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>Back</button>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center', fontSize: 13, padding: '10px 14px', borderRadius: 14, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
             <strong>Room: {roomCode}</strong>
             <span>Players: {activePlayers}</span>
@@ -841,22 +868,23 @@ function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteN
           )}
         </div>
 
-        <div style={{ padding: 18, borderRadius: 24, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', marginBottom: 18, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxShadow: '0 8px 30px rgba(0,0,0,0.35)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12 }}>
-            <div><strong>Stage:</strong> {visibleGame?.stage || 'waiting'}</div>
-            <div style={{ textAlign: 'center' }}><div style={{ fontSize: 13, opacity: 0.95, fontWeight: 700 }}>Pot</div><div style={{ fontSize: 42, fontWeight: 900 }}>{visibleGame?.pot || 0}</div></div>
-            <div style={{ textAlign: 'right' }}>
-              <strong>Timer:</strong>{' '}
-              <span style={{ fontWeight: 800 }}>{nextRoundCountdown != null ? `Next: ${nextRoundCountdown}s` : (isHeroTurn ? `${timeLeft}s` : 'Waiting')}</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(310px, 360px)', gap: 18, alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
+            <div style={{ textAlign: 'center', minHeight: 300, flex: 1, padding: '46px 22px', borderRadius: 28, background: 'rgba(34,85,43,0.55)', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 70px rgba(0,0,0,0.35)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div>{[0, 1, 2, 3, 4].map((i) => visibleGame?.communityCards?.[i] ? <PlayingCard key={visibleGame.communityCards[i].id} card={visibleGame.communityCards[i]} tiltEnabled onHoverSound={playCardHover} /> : <EmptyCard key={i} />)}</div>
             </div>
-          </div>
-          <div style={{ marginTop: 12, opacity: 0.92 }}>{visibleGame?.message || 'Host can start when at least 2 players joined.'}</div>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(310px, 360px)', gap: 18, alignItems: 'start' }}>
-          <div style={{ textAlign: 'center', padding: 22, borderRadius: 32, background: 'rgba(34,85,43,0.55)', border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 24px 70px rgba(0,0,0,0.35)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}>
-            <h2 style={{ marginTop: 0, color: '#fff' }}>Community Cards</h2>
-            <div>{[0, 1, 2, 3, 4].map((i) => visibleGame?.communityCards?.[i] ? <PlayingCard key={visibleGame.communityCards[i].id} card={visibleGame.communityCards[i]} tiltEnabled onHoverSound={playCardHover} /> : <EmptyCard key={i} />)}</div>
+            <div style={{ padding: 18, borderRadius: 22, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxShadow: '0 8px 30px rgba(0,0,0,0.35)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12 }}>
+                <div><strong>Stage:</strong> {visibleGame?.stage || 'waiting'}</div>
+                <div style={{ textAlign: 'center' }}><div style={{ fontSize: 13, opacity: 0.95, fontWeight: 700 }}>Pot</div><div style={{ fontSize: 42, fontWeight: 900 }}>{visibleGame?.pot || 0}</div></div>
+                <div style={{ textAlign: 'right' }}>
+                  <strong>Timer:</strong>{' '}
+                  <span style={{ fontWeight: 800 }}>{nextRoundCountdown != null ? `Next: ${nextRoundCountdown}s` : (isHeroTurn ? `${timeLeft}s` : 'Waiting')}</span>
+                </div>
+              </div>
+              <div style={{ marginTop: 12, opacity: 0.92 }}>{visibleGame?.message || 'Host can start when at least 2 players joined.'}</div>
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: 338, padding: 16, borderRadius: 28, background: 'rgba(255,248,239,0.08)', border: '1px solid rgba(255,248,239,0.16)', boxShadow: '0 24px 70px rgba(0,0,0,0.3)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
@@ -1201,11 +1229,9 @@ export default function Multiplayer({ onBack }) {
           </div>
         )}
         <div style={{ maxWidth: 720, margin: '0 auto', padding: 28, background: 'rgba(255,248,239,0.08)', borderRadius: 24, border: '1px solid rgba(255,248,239,0.14)', boxShadow: '0 24px 70px rgba(0,0,0,0.35)', backdropFilter: 'blur(14px)' }}>
-          <button onClick={onBack} style={{ border: 'none', borderRadius: 9999, padding: '10px 14px', background: 'transparent', color: '#fff', cursor: 'pointer' }}>← Back</button>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ letterSpacing: 2, textTransform: 'uppercase', fontSize: 12, opacity: 0.9, color: '#fff' }}>Multiplayer</div>
-            <h1 style={{ fontSize: 42, margin: '8px 0 10px', color: '#fff', textShadow: '0 6px 20px rgba(0,0,0,0.6)', fontWeight: 800 }}>Create or join a room</h1>
-            <p style={{ margin: 0, color: 'rgba(255,255,255,0.92)' }}>Use room codes to invite friends or join an existing table.</p>
+          <button onClick={onBack} style={{ border: 'none', borderRadius: 9999, padding: '10px 14px', background: 'transparent', color: '#fff', cursor: 'pointer' }}>Back</button>
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <div style={{ letterSpacing: 1.2, textTransform: 'uppercase', fontSize: 28, fontWeight: 900, opacity: 0.95, color: '#fff', textShadow: '0 6px 20px rgba(0,0,0,0.6)' }}>Multiplayer</div>
           </div>
           <div style={{ display: 'grid', gap: 18 }}>
             <div style={{ padding: 16, borderRadius: 16, background: 'rgba(255,255,255,0.06)' }}>

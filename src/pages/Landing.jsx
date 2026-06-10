@@ -150,12 +150,9 @@ export default function Landing({ onNavigate }) {
       <div style={{ position: 'relative', zIndex: 1, width: '100%' }}>
       <style>{hoverStyles}</style>
       <div style={cardStyle}>
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ letterSpacing: 3, textTransform: 'uppercase', fontSize: 16, opacity: 0.85, color: '#fff' }}>welcome to burn and turn!</div>
-          <h1 style={{ fontSize: 56, lineHeight: 1, margin: '10px 0 12px', color: '#fff', textShadow: '0 6px 18px rgba(0,0,0,0.6)' }}>Choose how you want to play</h1>
-          <p style={{ margin: 0, color: 'rgba(255,255,255,0.9)', fontSize: 16 }}>
-            Jump into a practice table with bots or set up a multiplayer room.
-          </p>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{ letterSpacing: 1.8, textTransform: 'uppercase', fontSize: 14, fontWeight: 800, opacity: 0.85, color: '#fff' }}>Welcome to</div>
+          <h1 style={{ fontSize: 58, lineHeight: 1.02, margin: '8px 0 0', color: '#fff', fontWeight: 900, letterSpacing: 0, textShadow: '0 6px 18px rgba(0,0,0,0.6)' }}>Burn & Turn</h1>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 18 }}>
