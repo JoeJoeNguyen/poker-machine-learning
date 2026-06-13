@@ -34,3 +34,23 @@ class FeedbackMessageResponse(BaseModel):
     email: str | None = None
     message: str
     created_at: str | None = None
+
+
+class RoomChatLogResponse(BaseModel):
+    id: int
+    author: str
+    message: str
+    created_at: str | None = None
+
+
+class RoomHistoryResponse(BaseModel):
+    code: str
+    max_players: int
+    active_players: int
+    player_names: list[str]
+    hands_played: int
+    is_active: bool
+    created_at: str | None = None
+    updated_at: str | None = None
+    closed_at: str | None = None
+    chat_logs: list[RoomChatLogResponse]

@@ -1,17 +1,18 @@
 from uuid import uuid4
 from collections.abc import AsyncGenerator
+from datetime import datetime, timedelta, timezone
 import logging
 
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.websockets import WebSocketDisconnect as StarletteWebSocketDisconnect
 
 from .config import settings
 from .db import Base, create_engine, create_session_factory
-from .models import FeedbackMessage, Room
+from .models import FeedbackMessage, Room, RoomChatLog
 from .room_codes import generate_room_code
 from .schemas import (
     CreateRoomRequest,
@@ -20,6 +21,8 @@ from .schemas import (
     FeedbackMessageResponse,
     JoinRoomRequest,
     JoinRoomResponse,
+    RoomChatLogResponse,
+    RoomHistoryResponse,
 )
 
 app = FastAPI(title="Poker Rooms API")
@@ -57,6 +60,7 @@ app.add_middleware(
 engine = create_engine()
 SessionFactory = create_session_factory(engine)
 db_ready = False
+ROOM_RETENTION_DAYS = 30
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
@@ -71,6 +75,7 @@ async def on_startup() -> None:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         db_ready = True
+        await prune_expired_room_data()
     except Exception as exc:
         db_ready = False
         logger.exception("Database unavailable during startup: %s", exc)
@@ -83,7 +88,7 @@ async def create_room(payload: CreateRoomRequest, session: AsyncSession = Depend
         existing = await session.execute(select(Room).where(Room.code == code))
         if existing.scalar_one_or_none() is not None:
             continue
-        room = Room(code=code, max_players=payload.max_players)
+        room = Room(code=code, max_players=payload.max_players, active_players=0, player_names=[], hands_played=0)
         session.add(room)
         await session.commit()
         await session.refresh(room)
@@ -105,6 +110,42 @@ async def join_room(payload: JoinRoomRequest, session: AsyncSession = Depends(ge
         raise HTTPException(status_code=400, detail="Room is full")
 
     return JoinRoomResponse(code=room.code, max_players=room.max_players, active_players=active_players + 1, token=str(uuid4()))
+
+
+@app.get("/api/rooms/{room_code}/history", response_model=RoomHistoryResponse)
+async def room_history(room_code: str, session: AsyncSession = Depends(get_session)) -> RoomHistoryResponse:
+    result = await session.execute(select(Room).where(Room.code == room_code.upper()))
+    room = result.scalar_one_or_none()
+    if room is None:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    chat_result = await session.execute(
+        select(RoomChatLog)
+        .where(RoomChatLog.room_id == room.id)
+        .order_by(RoomChatLog.created_at.desc())
+        .limit(200)
+    )
+    chat_logs = list(reversed(chat_result.scalars().all()))
+    return RoomHistoryResponse(
+        code=room.code,
+        max_players=room.max_players,
+        active_players=room.active_players,
+        player_names=list(room.player_names or []),
+        hands_played=room.hands_played,
+        is_active=room.is_active,
+        created_at=room.created_at.isoformat() if room.created_at else None,
+        updated_at=room.updated_at.isoformat() if room.updated_at else None,
+        closed_at=room.closed_at.isoformat() if room.closed_at else None,
+        chat_logs=[
+            RoomChatLogResponse(
+                id=log.id,
+                author=log.author,
+                message=log.message,
+                created_at=log.created_at.isoformat() if log.created_at else None,
+            )
+            for log in chat_logs
+        ],
+    )
 
 
 @app.post("/api/feedback", response_model=FeedbackMessageResponse)
@@ -218,9 +259,82 @@ async def delete_room_record(room_code: str) -> None:
         room = result.scalar_one_or_none()
         if room is None:
             return
-        await session.delete(room)
+        room.is_active = False
+        room.active_players = 0
+        room.closed_at = func.now()
+        room.updated_at = func.now()
         await session.commit()
-        logger.info("Deleted empty room %s", room_code)
+        logger.info("Marked empty room %s inactive", room_code)
+
+
+async def prune_expired_room_data() -> None:
+    async with SessionFactory() as session:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=ROOM_RETENTION_DAYS)
+        await session.execute(delete(RoomChatLog).where(RoomChatLog.created_at < cutoff))
+        await session.execute(delete(Room).where(Room.updated_at < cutoff))
+        await session.commit()
+
+
+async def update_room_presence(room_code: str) -> None:
+    async with SessionFactory() as session:
+        result = await session.execute(select(Room).where(Room.code == room_code))
+        room = result.scalar_one_or_none()
+        if room is None:
+            return
+        names = manager.get_names(room_code)
+        room.active_players = manager.get_presence(room_code)
+        room.player_names = names
+        room.updated_at = func.now()
+        if room.active_players > 0:
+            room.is_active = True
+            room.closed_at = None
+        await session.commit()
+
+
+async def update_room_hand_count(room_code: str, game: dict) -> None:
+    hand_number = game.get("handNumber")
+    if not isinstance(hand_number, int):
+        return
+    player_names = [
+        str(player.get("name")).strip()
+        for player in game.get("players", [])
+        if isinstance(player, dict) and str(player.get("name") or "").strip()
+    ]
+    async with SessionFactory() as session:
+        result = await session.execute(select(Room).where(Room.code == room_code))
+        room = result.scalar_one_or_none()
+        if room is None:
+            return
+        room.hands_played = max(room.hands_played or 0, hand_number)
+        room.player_names = player_names or room.player_names
+        room.active_players = manager.get_presence(room_code)
+        room.updated_at = func.now()
+        await session.commit()
+
+
+async def store_chat_log(room_code: str, payload: dict) -> None:
+    if payload.get("type") != "chat":
+        return
+    text = str(payload.get("text") or "").strip()
+    author = str(payload.get("author") or "Player").strip() or "Player"
+    if not text:
+        return
+    async with SessionFactory() as session:
+        result = await session.execute(select(Room).where(Room.code == room_code))
+        room = result.scalar_one_or_none()
+        if room is None:
+            return
+        session.add(
+            RoomChatLog(
+                room_id=room.id,
+                room_code=room.code,
+                client_message_id=str(payload.get("id") or "").strip() or None,
+                author=author[:120],
+                message=text[:5000],
+            )
+        )
+        room.updated_at = func.now()
+        await session.commit()
 
 
 manager = ConnectionManager()
@@ -244,6 +358,7 @@ async def room_socket(websocket: WebSocket, room_code: str) -> None:
             logger.info("Received WS message in room %s token=%s type=%s", room_code, token, data.get("type"))
             if data.get("type") == "name":
                 manager.set_name(room_code, token, str(data.get("name") or "").strip())
+                await update_room_presence(room_code)
                 await manager.broadcast(
                     room_code,
                     {
@@ -255,8 +370,10 @@ async def room_socket(websocket: WebSocket, room_code: str) -> None:
                 continue
             if data.get("type") == "game_state":
                 logger.info("Relaying game_state from token=%s in room %s (handNumber=%s)", token, room_code, (data.get('game') or {}).get('handNumber'))
+                await update_room_hand_count(room_code, data.get("game") or {})
                 await manager.broadcast(room_code, data)
                 continue
+            await store_chat_log(room_code, data)
             await manager.broadcast(room_code, {"type": "message", "payload": data})
     except WebSocketDisconnect:
         manager.disconnect(room_code, websocket)
@@ -264,6 +381,7 @@ async def room_socket(websocket: WebSocket, room_code: str) -> None:
         if remaining == 0:
             await delete_room_record(room_code)
             return
+        await update_room_presence(room_code)
         await manager.broadcast(
             room_code,
             {
