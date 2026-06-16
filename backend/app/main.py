@@ -357,7 +357,11 @@ async def room_socket(websocket: WebSocket, room_code: str) -> None:
             data = await websocket.receive_json()
             logger.info("Received WS message in room %s token=%s type=%s", room_code, token, data.get("type"))
             if data.get("type") == "name":
-                manager.set_name(room_code, token, str(data.get("name") or "").strip())
+                player_name = str(data.get("name") or "").strip()
+                if not player_name:
+                    await websocket.send_json({"type": "error", "detail": "Player name is required."})
+                    continue
+                manager.set_name(room_code, token, player_name[:120])
                 await update_room_presence(room_code)
                 await manager.broadcast(
                     room_code,

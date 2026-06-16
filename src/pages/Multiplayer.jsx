@@ -412,7 +412,7 @@ function Seat({ player, isTurn, isHero, isHost, dealer, smallBlind, bigBlind, od
 
 // Runs the active multiplayer table, including poker state, chat, timers, and sockets.
 function MultiplayerTable({ onBack, roomCode, activePlayers, maxPlayers, remoteNames, playerName, isHost, hostName, socketRef, monogramCells, monogramSuits, externalGame, onGameState }) {
-  const normalizedName = playerName.trim() || 'You'
+  const normalizedName = playerName.trim()
   const effectiveHostName = hostName || remoteNames[0] || normalizedName
   const [game, setGame] = React.useState(externalGame || null)
   const [timeLeft, setTimeLeft] = React.useState(THINK_TIME)
@@ -1185,6 +1185,10 @@ export default function Multiplayer({ onBack }) {
       setStatus('Please enter your name to continue.')
       return
     }
+    if (cleanedName.length > 120) {
+      setStatus('Please keep your name under 120 characters.')
+      return
+    }
     setNamePrompt({ open: false, action: null, name: '' })
     if (namePrompt.action === 'create') void doCreate(cleanedName)
     if (namePrompt.action === 'join') void doJoin(cleanedName)
@@ -1220,7 +1224,18 @@ export default function Multiplayer({ onBack }) {
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(5,5,5,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
             <div style={{ width: 360, padding: 20, borderRadius: 18, background: '#1f1108', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', boxSizing: 'border-box' }}>
               <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Enter your name</div>
-              <input value={namePrompt.name} onChange={(event) => setNamePrompt((prev) => ({ ...prev, name: event.target.value }))} placeholder="Your name" style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#fff', outline: 'none', marginBottom: 12, boxSizing: 'border-box' }} />
+              <input
+                value={namePrompt.name}
+                onChange={(event) => setNamePrompt((prev) => ({ ...prev, name: event.target.value }))}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') confirmName()
+                }}
+                placeholder="Your name"
+                required
+                maxLength={120}
+                autoFocus
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: '#fff', outline: 'none', marginBottom: 12, boxSizing: 'border-box' }}
+              />
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button onClick={() => setNamePrompt({ open: false, action: null, name: '' })} style={{ border: 'none', borderRadius: 9999, padding: '10px 14px', background: 'rgba(255,255,255,0.08)', color: '#fff', cursor: 'pointer' }}>Cancel</button>
                 <button onClick={confirmName} style={{ border: 'none', borderRadius: 9999, padding: '10px 16px', background: '#f8efe6', color: '#2b160b', fontWeight: 700, cursor: 'pointer' }}>Continue</button>
