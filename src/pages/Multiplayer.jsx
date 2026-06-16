@@ -8,8 +8,9 @@ import flopTurnRiverSound from '../../soundEffect/FlopTurnRiver.mp3'
 import foldSound from '../../soundEffect/Fold.mp3'
 import hoverCardSound from '../../soundEffect/HoverOnCard.mp3'
 import winHandSound from '../../soundEffect/winHand.mp3'
+import cardBackPng from '../../cardFacev2/cardBack.png'
 
-const cardFaceModules = import.meta.glob('../../cardFace/*.png', { eager: true, query: '?url', import: 'default' })
+const cardFaceModules = import.meta.glob('../../cardFacev2/*.{png,jpg,jpeg}', { eager: true, query: '?url', import: 'default' })
 const PROD_API_BASE = 'https://poker-machine-learning-production.up.railway.app'
 
 // Chooses the correct backend URL for local development or production.
@@ -29,10 +30,13 @@ const NEXT_ROUND_DELAY = 10
 const suits = ['♠', '♥', '♦', '♣']
 const ranks = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2']
 const SUIT_FILE_NAMES = { '♠': 'spades', '♥': 'hearts', '♦': 'diamonds', '♣': 'clubs' }
+const RANK_FILE_NAMES = { A: 'ace', K: 'king', Q: 'queen', J: 'jack' }
 const CARD_FACE_URLS = Object.fromEntries(
-  Object.entries(cardFaceModules).map(([path, url]) => [path.split('/').pop()?.replace('.png', ''), url])
+  Object.entries(cardFaceModules).map(([path, url]) => [path.split('/').pop()?.replace(/\.(png|jpe?g)$/i, ''), url])
 )
-const CARD_BACK_URL = CARD_FACE_URLS.cardBack
+const CARD_BACK_URL = cardBackPng
+const CARD_WIDTH = 72
+const CARD_HEIGHT = Math.round(CARD_WIDTH * (726 / 500))
 const RANK_VALUE = { 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10, J: 11, Q: 12, K: 13, A: 14 }
 const HAND_NAMES = ['High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight', 'Flush', 'Full House', 'Four of a Kind', 'Straight Flush']
 const SOUND_URLS = {
@@ -101,10 +105,13 @@ function buildDeck() {
   return deck
 }
 
-// Resolves a dealt card to its matching image in cardFace, e.g. hearts_A.png.
+// Resolves a dealt card to its matching image in cardFacev2, e.g. king_of_hearts2.png.
 function cardFaceUrl(card) {
   if (!card?.rank || !card?.suit) return null
-  return CARD_FACE_URLS[`${SUIT_FILE_NAMES[card.suit]}_${card.rank}`] || null
+  const suit = SUIT_FILE_NAMES[card.suit]
+  const rank = RANK_FILE_NAMES[card.rank] || card.rank
+  const faceCardSuffix = ['K', 'Q', 'J'].includes(card.rank) ? '2' : ''
+  return CARD_FACE_URLS[`${rank}_of_${suit}${faceCardSuffix}`] || null
 }
 
 // Returns a shuffled copy of a deck using Fisher-Yates.
@@ -352,14 +359,14 @@ function PlayingCard({ card, hidden = false, blurred = false, tiltEnabled = fals
     >
       <span
         data-tilt={tiltEnabled && !hidden ? 'true' : undefined}
-        style={{ width: 72, height: 102, borderRadius: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: hidden ? 'rgba(74,45,33,0.62)' : 'rgba(255,247,236,0.78)', color: hidden ? '#fff7ec' : red ? '#dc2626' : '#1f2937', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 8px 20px rgba(0,0,0,0.25)', fontWeight: 800, backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', filter: blurred ? 'blur(2.4px)' : 'none', opacity: blurred ? 0.55 : 1, transition: 'filter 160ms ease, opacity 160ms ease, transform 160ms ease', willChange: 'transform' }}
+        style={{ width: CARD_WIDTH, height: CARD_HEIGHT, borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: hidden ? '#140b06' : '#fff', color: hidden ? '#fff7ec' : red ? '#dc2626' : '#1f2937', border: '1px solid rgba(255,255,255,0.18)', boxShadow: '0 8px 20px rgba(0,0,0,0.25)', fontWeight: 800, filter: blurred ? 'blur(2.4px)' : 'none', opacity: blurred ? 0.55 : 1, transition: 'filter 160ms ease, opacity 160ms ease, transform 160ms ease', willChange: 'transform' }}
       >
         {hidden && CARD_BACK_URL ? (
           <img
             src={CARD_BACK_URL}
             alt="Card back"
             draggable="false"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{ width: '106%', height: '106%', objectFit: 'cover', display: 'block' }}
           />
         ) : hidden ? '🂠' : faceUrl ? (
           <img
@@ -381,7 +388,7 @@ function PlayingCard({ card, hidden = false, blurred = false, tiltEnabled = fals
 
 // Renders a placeholder slot before a community card is revealed.
 function EmptyCard() {
-  return <div style={{ width: 72, height: 102, borderRadius: 14, margin: 5, display: 'inline-block', border: '2px dashed rgba(255,247,236,0.35)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }} />
+  return <div style={{ width: CARD_WIDTH, height: CARD_HEIGHT, borderRadius: 8, margin: 5, display: 'inline-block', border: '2px dashed rgba(255,247,236,0.35)', background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }} />
 }
 
 // Renders one player's seat, cards, badges, chips, bet, and odds.
